@@ -1,0 +1,101 @@
+# End-to-End AutoML (H2O + MLflow + FastAPI + Streamlit)
+# Lancer la stack complete : docker compose up --build
+#
+# Flux : mlflow (serveur + registry) -> trainer (entraine + enregistre @champion)
+#        -> backend (sert le modele) -> frontend (UI Streamlit)
+#
+# Ports exposes :
+#   - 8501 : Streamlit UI    (http://localhost:8501)
+#   - 8000 : FastAPI         (http://localhost:8000)
+#   - 5000 : MLflow UI       (http://localhost:5000)
+
+services:
+  # MLflow Tracking Server + Model Registry (sqlite + artefacts servis par le serveur)
+  mlflow:
+    build: ./backend
+    image: e2e-automl-backend:latest
+    command: >
+      mlflow server
+      --backend-store-uri sqlite:////mlflow/mlflow.db
+      --artifacts-destination /mlflow/artifacts
+      --serve-artifacts
+      --host 0.0.0.0
+      --port 5000
+    ports:
+      - "5000:5000"
+    volumes:
+      - mlflow_data:/mlflow
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    networks:
+      - project_network
+
+  # Entrainement H2O AutoML (one-shot) : log du run + enregistrement du modele @champion
+  trainer:
+    build: ./backend
+    image: e2e-automl-backend:latest
+    command: ["python", "train.py", "--target", "Response"]
+    environment:
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      MODEL_NAME: insurance-automl
+      MODEL_ALIAS: champion
+      # Defauts alleges pour un smoke test rapide/fiable sur Docker Desktop.
+      # Pour un entrainement complet : AUTOML_MAX_MODELS=10, AUTOML_MAX_RUNTIME_SECS=0, AUTOML_SAMPLE_FRAC=1.0
+      AUTOML_MAX_MODELS: "5"
+      AUTOML_MAX_RUNTIME_SECS: "120"
+      AUTOML_SAMPLE_FRAC: "0.2"
+    depends_on:
+      mlflow:
+        condition: service_healthy
+    restart: "no"
+    networks:
+      - project_network
+
+  # Backend FastAPI : charge models:/insurance-automl@champion depuis MLflow
+  backend:
+    build: ./backend
+    image: e2e-automl-backend:latest
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+    environment:
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      MODEL_NAME: insurance-automl
+      MODEL_ALIAS: champion
+    ports:
+      - "8000:8000"
+    depends_on:
+      mlflow:
+        condition: service_healthy
+      trainer:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+    networks:
+      - project_network
+
+  # Frontend Streamlit : poste les CSV vers le backend
+  frontend:
+    build: ./frontend
+    image: e2e-automl-frontend:latest
+    environment:
+      BACKEND_URL: http://backend:8000/predict
+    ports:
+      - "8501:8501"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - project_network
+
+volumes:
+  mlflow_data:
+
+networks:
+  project_network:

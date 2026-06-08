@@ -1,0 +1,5 @@
+__pycache__/
+*.py[cod]
+mlruns/
+.pytest_cache/
+*.log
