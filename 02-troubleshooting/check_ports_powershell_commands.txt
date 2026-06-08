@@ -1,0 +1,68 @@
+CHECK IF PORTS ARE OCCUPIED - POWERSHELL COMMANDS
+====================================================
+
+Services to check:
+- Streamlit UI  : http://localhost:8501
+- FastAPI Docs  : http://localhost:8000/docs
+- MLflow UI     : http://localhost:5000
+
+
+1. CHECK PORTS WITH NETSTAT
+---------------------------
+
+netstat -ano | findstr :8501
+netstat -ano | findstr :8000
+netstat -ano | findstr :5000
+
+
+2. CHECK PORTS WITH POWERSHELL
+------------------------------
+
+Get-NetTCPConnection -LocalPort 8501 -ErrorAction SilentlyContinue
+Get-NetTCPConnection -LocalPort 8000 -ErrorAction SilentlyContinue
+Get-NetTCPConnection -LocalPort 5000 -ErrorAction SilentlyContinue
+
+
+3. SEE WHICH PROGRAM IS USING A PORT
+------------------------------------
+
+Get-Process -Id (Get-NetTCPConnection -LocalPort 8501).OwningProcess
+Get-Process -Id (Get-NetTCPConnection -LocalPort 8000).OwningProcess
+Get-Process -Id (Get-NetTCPConnection -LocalPort 5000).OwningProcess
+
+
+4. CHECK RUNNING DOCKER CONTAINERS
+----------------------------------
+
+docker ps
+
+
+5. CHECK DOCKER CONTAINERS WITH PORTS
+-------------------------------------
+
+docker ps --format "table {{.Names}}\t{{.Ports}}"
+
+
+6. INTERPRETATION
+-----------------
+
+If a command returns information, the port is occupied.
+
+If nothing appears, the port is usually free.
+
+Example:
+- If port 8501 is occupied, Streamlit or another process may already be running.
+- If port 8000 is occupied, FastAPI or another API may already be running.
+- If port 5000 is occupied, MLflow or another service may already be running.
+
+
+7. OPTIONAL - STOP A PROCESS BY PID
+-----------------------------------
+
+Use this only if you are sure the process can be stopped.
+
+Stop-Process -Id PID_NUMBER -Force
+
+Example:
+
+Stop-Process -Id 12345 -Force
