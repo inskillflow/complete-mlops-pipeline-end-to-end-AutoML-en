@@ -1,6 +1,6 @@
 <a id="top"></a>
 
-# Complete Prediction Workflow — Detailed Technical Answer with Mermaid Diagrams
+# Complete Prediction Workflow
 
 ## Table of Contents
 
