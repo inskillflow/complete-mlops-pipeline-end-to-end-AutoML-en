@@ -1,5 +1,5 @@
 # Projet AutoML Assurance — Guide pratique étape par étape
-Guide pratique de reproduction — à donner aux étudiants
+Guide pratique de reproduction
 
 **But du document :** ce document montre exactement quoi faire, dans quel ordre, quoi taper et quoi vérifier. L'objectif est de reproduire de zéro une application complète de Machine Learning : un modèle H2O AutoML entraîné automatiquement, un serveur MLflow qui stocke ce modèle, une API FastAPI qui sert les prédictions, et une interface Streamlit accessible dans le navigateur. Tout fonctionne avec **Docker Compose** : une seule commande lance les quatre services.
 
