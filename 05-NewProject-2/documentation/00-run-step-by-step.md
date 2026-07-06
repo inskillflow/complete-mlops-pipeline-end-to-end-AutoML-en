@@ -21,7 +21,7 @@
 Type this (change the path to where the project is on your machine):
 
 ```powershell
-cd "C:\Users\Haythem\Downloads\Compressed\processus-et-ecosystemes-ia-main\processus-et-ecosystemes-ia-main\solutions-lab\14-mlflow-step-by-step-recap-multiple-experiments-elasticnet-ridge-lasso-fastapi-streamlit"
+cd 14-mlflow-step-by-step-recap-multiple-experiments-elasticnet-ridge-lasso-fastapi-streamlit/
 ```
 
 Check you are in the right place:
