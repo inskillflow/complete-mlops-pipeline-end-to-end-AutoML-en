@@ -1,0 +1,77 @@
+﻿services:
+  mlflow:
+    build:
+      context: ./mlflow
+    image: mlops/mlflow-recap:latest
+    container_name: mlflow-recap-11
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./database:/mlflow/database     # bind mount -> host folder MUST exist
+      - ./mlruns:/mlflow/mlruns         # bind mount -> host folder MUST exist
+      - .:/work                         # whole project visible from Docker Desktop -> Exec -> ls
+    working_dir: /work
+    networks:
+      - recap-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:5000').status==200 else 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  trainer:
+    build:
+      context: ./trainer
+    image: mlops/trainer-recap:latest
+    container_name: trainer-recap-11
+    environment:
+      MLFLOW_TRACKING_URI: "http://mlflow:5000"
+    volumes:
+      - ./data:/code/data
+      - ./mlruns:/mlflow/mlruns        # partage le stockage d'artefacts avec mlflow + api
+    networks:
+      - recap-net
+    depends_on:
+      mlflow:
+        condition: service_healthy
+
+  api:
+    build:
+      context: ./api
+    image: mlops/api-recap:latest
+    container_name: api-recap-14
+    ports:
+      - "8000:8000"
+    environment:
+      MLFLOW_TRACKING_URI: "http://mlflow:5000"
+    volumes:
+      - ./data:/code/data              # dataset pour /features et /presets
+      - ./mlruns:/mlflow/mlruns        # artefacts pour mlflow.pyfunc.load_model
+    networks:
+      - recap-net
+    depends_on:
+      mlflow:
+        condition: service_healthy
+    restart: unless-stopped
+
+  ui:
+    build:
+      context: ./ui
+    image: mlops/ui-recap:latest
+    container_name: ui-recap-14
+    ports:
+      - "8501:8501"
+    environment:
+      API_URL: "http://api:8000"
+    volumes:
+      - ./data:/code/data              # dataset pour l'onglet Exploration (EDA)
+    networks:
+      - recap-net
+    depends_on:
+      - api
+    restart: unless-stopped
+
+networks:
+  recap-net:
+    driver: bridge
